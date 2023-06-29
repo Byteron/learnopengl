@@ -17,7 +17,7 @@ main :: () {
 	);
 
 	if !window {
-		print("Could not create Window: %\n", to_string(SDL_GetError()));
+		log_error("Could not create Window: %\n", to_string(SDL_GetError()));
 		return;
 	}
 	
@@ -27,7 +27,7 @@ main :: () {
 
 	gl_context := SDL_GL_CreateContext(window);
 	if !gl_context {
-		print("Could not create OpenGL context: %\n", to_string(SDL_GetError()));
+		log_error("Could not create OpenGL context: %\n", to_string(SDL_GetError()));
 		return;
 	}
 

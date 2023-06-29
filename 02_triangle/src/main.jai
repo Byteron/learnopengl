@@ -37,7 +37,7 @@ main :: () {
 	);
 
 	if !window {
-		print("Could not create Window: %\n", to_string(SDL_GetError()));
+		log_error("Could not create Window: %\n", to_string(SDL_GetError()));
 		return;
 	}
 	
@@ -47,7 +47,7 @@ main :: () {
 
 	gl_context := SDL_GL_CreateContext(window);
 	if !gl_context {
-		print("Could not create OpenGL context: %\n", to_string(SDL_GetError()));
+		log_error("Could not create OpenGL context: %\n", to_string(SDL_GetError()));
 		return;
 	}
 
@@ -67,7 +67,7 @@ main :: () {
 	glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, *success);
 	if !success {
 		glGetShaderInfoLog(vertex_shader, 512, null, info_log.data);
-        print("Error: %\n", to_string(info_log));
+        log_error("Error: %\n", to_string(info_log));
 		return;
 	}
 
@@ -79,7 +79,7 @@ main :: () {
 	glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, *success);
 	if !success {
 		glGetShaderInfoLog(fragment_shader, 512, null, info_log.data);
-        print("Error: %\n", to_string(info_log));
+        log_error("Error: %\n", to_string(info_log));
 		return;
 	}
 
@@ -92,7 +92,7 @@ main :: () {
 	glGetProgramiv(shader_program, GL_LINK_STATUS, *success);
     if !success {
         glGetProgramInfoLog(shader_program, 512, null, info_log.data);
-        print("Error: %\n", to_string(info_log));
+        log_error("Error: %\n", to_string(info_log));
 		return;
     }
 
