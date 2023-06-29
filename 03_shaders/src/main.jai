@@ -1,47 +1,16 @@
 #import "Basic";
+#import "System";
 #import "SDL";
 #import "GL";
 #import "Math";
 
 #load "shader.jai";
 
-VERTEX_SHADER :: #string GLSL
-#version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
-
-out vec3 ourColor;
-
-void main()
-{
-    gl_Position = vec4(aPos, 1.0);
-    ourColor = aColor;
-}
-GLSL
-
-FRAGMENT_SHADER :: #string GLSL
-#version 330 core
-out vec4 FragColor;
-
-in vec3 ourColor;
-
-void main()
-{
-    FragColor = vec4(ourColor, 1.0f);
-}
-GLSL
-
 window_width := 1280;
 window_height := 800;
 
-Vertex :: struct {
-	position: Vector3;
-	color: Vector4;
-};
-
-
 main :: () {
-    SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_VIDEO);
 	defer SDL_Quit();
 
 	window := SDL_CreateWindow(
@@ -72,18 +41,24 @@ main :: () {
 	print("GL Vendor = %\n", to_string(glGetString(GL_VENDOR)));
 	print("GL Version = %\n", to_string(glGetString(GL_VERSION)));
 
-	shader_program, success := create_shader_program(VERTEX_SHADER, FRAGMENT_SHADER);
+	path := path_strip_filename(get_path_of_running_executable());
+	vertex_source := read_entire_file(tprint("%/%", path, "assets/shaders/03_shaders/shader.vert"));
+	fragment_source := read_entire_file(tprint("%/%", path, "assets/shaders/03_shaders/shader.frag"));
+
+	shader_program, success := create_shader_program(vertex_source, fragment_source);
 	
 	if !success {
 		return;
 	}
 	
 	defer glDeleteProgram(shader_program);
-	
+
+	// we use a Vertex struct, containing a Vector3 for position and a Vector3 for color
+	// in memory it is the same layout as if we would use a float array
 	VERTICES :: Vertex.[
-		.{.{0.5, -0.5, 0},  .{1, 0, 0, 1}},  // bottom right
-        .{.{-0.5, -0.5, 0},  .{0, 1, 0, 1}},  // bottom left
-         .{.{0,  0.5, 0},  .{0, 0, 1, 1}},   // top
+		.{.{0.5, -0.5, 0},  .{1, 0, 0}},  // bottom right
+        .{.{-0.5, -0.5, 0},  .{0, 1, 0}},  // bottom left
+         .{.{0,  0.5, 0},  .{0, 0, 1}},   // top
 	];
 
 	VAO, VBO: GLuint;
@@ -100,7 +75,7 @@ main :: () {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, size_of(Vertex), null);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, size_of(Vertex), xx (3 * size_of(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, size_of(Vertex), xx (size_of(Vector3)));
 	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -135,3 +110,7 @@ main :: () {
 	}
 }
 
+Vertex :: struct {
+	position: Vector3;
+	color: Vector3;
+};
