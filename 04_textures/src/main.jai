@@ -142,6 +142,7 @@ main :: () {
 	path := path_strip_filename(get_path_of_running_executable());
 
 	width, height, nr_channels : s32 = 0;
+	// jai bindings do not have the flip function, so we will have to deal with upside down images for now
     data := stbi_load(to_c_string(tprint("%/%", path, "assets/images/wall.jpg")), *width, *height, *nr_channels, 0);
     
 	if data == null {
