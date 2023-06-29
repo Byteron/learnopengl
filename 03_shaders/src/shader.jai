@@ -72,32 +72,3 @@ create_shader_program :: (vertex_source: string, fragment_source: string) -> GLu
 
 	return result, true;
 }
-
-// I have them here for completeness sake, though I don't think they are necessary
-// whether we call glUseProgram(shader) or use_shader(shader) really doesn't make a difference
-// except that the latter introduces more code and more abstraction
-
-// use_shader :: (shader: GLuint) {
-//     glUseProgram(shader);
-// }
-
-// delete_shader :: (shader: GLuint) {
-//     glDeleteProgram(shader);
-// }
-
-// these functions actually do make it a little more readable, so we keep them
-set_bool :: (shader: GLuint, name: string, value: bool) {
-    glUniform1i(glGetUniformLocation(shader, to_c_string(name)), xx value);
-}
-
-set_int :: (shader: GLuint, name: string, value: s32) {
-    glUniform1i(glGetUniformLocation(shader, to_c_string(name)), value);
-}
-
-set_float :: (shader: GLuint, name: string, value: float) {
-    glUniform1f(glGetUniformLocation(shader, to_c_string(name)), value);
-}
-
-set_mat4 :: (shader: GLuint, name: string, value: Matrix4) {
-    glUniformMatrix4fv(glGetUniformLocation(shader, to_c_string(name)), 1, GL_TRUE, *value.coef[0][0]);
-}

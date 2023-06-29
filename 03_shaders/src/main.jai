@@ -53,12 +53,11 @@ main :: () {
 	
 	defer glDeleteProgram(shader_program);
 
-	// we use a Vertex struct, containing a Vector3 for position and a Vector3 for color
-	// in memory it is the same layout as if we would use a float array
-	VERTICES :: Vertex.[
-		.{.{0.5, -0.5, 0},  .{1, 0, 0}},  // bottom right
-        .{.{-0.5, -0.5, 0},  .{0, 1, 0}},  // bottom left
-         .{.{0,  0.5, 0},  .{0, 0, 1}},   // top
+
+	VERTICES :: float.[
+		 0.5, -0.5, 0,	1, 0, 0,  // bottom right
+        -0.5, -0.5, 0,	0, 1, 0,  // bottom left
+         0,    0.5, 0,  0, 0, 1,   // top
 	];
 
 	VAO, VBO: GLuint;
@@ -72,10 +71,10 @@ main :: () {
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, size_of(type_of(VERTICES)), xx VERTICES.data, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, size_of(Vertex), null);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * size_of(float), null);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, size_of(Vertex), xx (size_of(Vector3)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * size_of(float), xx (3 * size_of(float)));
 	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -109,8 +108,3 @@ main :: () {
 		SDL_GL_SwapWindow(window);
 	}
 }
-
-Vertex :: struct {
-	position: Vector3;
-	color: Vector3;
-};
