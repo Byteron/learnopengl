@@ -5,6 +5,12 @@
 window_width := 1280;
 window_height := 800;
 
+VERTICES :: float.[
+	-0.5, -0.5, 0.0,
+     0.5, -0.5, 0.0,
+     0.0,  0.5, 0.0
+];
+
 main :: () {
     SDL_Init(SDL_INIT_VIDEO);
 	defer SDL_Quit();
@@ -37,6 +43,9 @@ main :: () {
 	print("GL Vendor = %\n", to_string(glGetString(GL_VENDOR)));
 	print("GL Version = %\n", to_string(glGetString(GL_VERSION)));
 
+    time: float;
+    delta: float;
+
 	quit: bool;
 	while !quit {
 		event: SDL_Event;
@@ -53,6 +62,10 @@ main :: () {
 					}
 			}
 		}
+
+		new_time: float = xx get_time();
+        delta := new_time - time;
+        time = new_time;
 
 		glViewport(0, 0, xx window_width, xx window_height);
 		glClearColor(0.2, 0.3, 0.3, 1.0);
