@@ -6,6 +6,8 @@
 #import "stb_image";
 
 #load "shader.jai";
+#load "camera.jai";
+#load "input.jai";
 
 VERTEX_SHADER :: #string GLSL
 #version 330 core
@@ -51,17 +53,11 @@ camera_speed := 2.5;
 camera_position := Vector3.{0, 0, 3};
 camera_front := Vector3.{0, 0, -1};
 
-key_forward := false;
-key_back := false;
-key_right := false;
-key_left := false;
-
-yaw := -90.0;
-pitch := 0.0;
 mouse_x := 0;
 mouse_y := 0;
 mouse_scroll := 0;
-fov := 45.0;
+
+camera: Camera;
 
 time: float64;
 delta: float;
@@ -97,7 +93,7 @@ main :: () {
 
 	print("GL Vendor = %\n", to_string(glGetString(GL_VENDOR)));
 	print("GL Version = %\n", to_string(glGetString(GL_VERSION)));
-
+	print("LSHIFT: %\n", cast(int) SDLK_LSHIFT);
 	glEnable(GL_DEPTH_TEST);
 	
 	SDL_ShowCursor(0);
@@ -244,6 +240,8 @@ main :: () {
 	while !quit {
 		mouse_x, mouse_y, mouse_scroll = 0;
 		is_warping_mouse := false;
+		
+		reset_keys();
 
 		event: SDL_Event;
 		while SDL_PollEvent(*event) {
@@ -251,23 +249,14 @@ main :: () {
 				case SDL_QUIT;
 					quit = true;
 				case SDL_KEYDOWN;
-					if event.key.keysym.sym == SDLK_w key_forward = true;
-					if event.key.keysym.sym == SDLK_s key_back = true;
-					if event.key.keysym.sym == SDLK_a key_left = true;
-					if event.key.keysym.sym == SDLK_d key_right = true;
+					press_key(event.key.keysym.scancode);
 				case SDL_KEYUP;
-					if event.key.keysym.sym == SDLK_ESCAPE quit = true;
-
-					if event.key.keysym.sym == SDLK_w key_forward = false;
-					if event.key.keysym.sym == SDLK_s key_back = false;
-					if event.key.keysym.sym == SDLK_a key_left = false;
-					if event.key.keysym.sym == SDLK_d key_right = false;
+					release_key(event.key.keysym.scancode);
 				case SDL_WINDOWEVENT;
 					if event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED {
 						window_width = event.window.data1;
 						window_height = event.window.data2;
 					}
-
 					SDL_WarpMouseInWindow(window, window_width / 2, window_height / 2);
 					is_warping_mouse = true;
 				case SDL_MOUSEMOTION;
@@ -283,31 +272,13 @@ main :: () {
 			}
 		}
 		
+		if key_down(SDL_SCANCODE_ESCAPE) quit = true;
+
 		new_time := get_time();
         delta = xx (new_time - time);
         time = new_time;
 
-		if key_forward camera_position += camera_front * camera_speed * delta;
-		if key_back camera_position -= camera_front * camera_speed * delta;
-		if key_left camera_position -= normalize_or_zero(cross(camera_front, UP)) * camera_speed * delta;
-		if key_right camera_position += normalize_or_zero(cross(camera_front, UP)) * camera_speed * delta;
-		
-		sensitivity := 0.1;
-		yaw += mouse_x * sensitivity;
-		pitch -= mouse_y * sensitivity;
-
-		if pitch > 89.0 pitch = 89.0;
-		if pitch < -89.0 pitch = -89.0;
-
-		front := Vector3.{0, 0, 0};
-		front.x = cos(radians(yaw)) * cos(radians(pitch));
-		front.y = sin(radians(pitch));
-		front.z = sin(radians(yaw)) * cos(radians(pitch));
-		camera_front = normalize_or_zero(front);
-		
-		fov -= xx mouse_scroll;
-		if fov < 1.0 fov = 1.0;
-		if fov > 45.0 fov = 45.0;
+		update_flying_camera(*camera);
 			
 		glClearColor(0.2, 0.3, 0.3, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -321,12 +292,8 @@ main :: () {
 
 		glUseProgram(shader_program);
 
-		projection := Matrix4_Identity;
-		projection = make_projection_matrix(radians(fov), window_width / cast (float) window_height, 0.1, 1000.0);
-		set_mat4(shader_program, "projection", projection);
-
-		view := make_look_at_matrix(camera_position, camera_position + camera_front, UP, false);
-        set_mat4(shader_program, "view", view);
+		set_mat4(shader_program, "projection", camera.projection_matrix);
+        set_mat4(shader_program, "view", camera.view_matrix);
 
 		glBindVertexArray(VAO);
 
