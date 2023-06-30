@@ -300,9 +300,9 @@ main :: () {
 		if pitch < -89.0 pitch = -89.0;
 
 		front := Vector3.{0, 0, 0};
-		front.x = cos(yaw * (PI / 180)) * cos(pitch * (PI / 180));
-		front.y = sin(pitch * (PI / 180));
-		front.z = sin(yaw * (PI / 180)) * cos(pitch * (PI / 180));
+		front.x = cos(radians(yaw)) * cos(radians(pitch));
+		front.y = sin(radians(pitch));
+		front.z = sin(radians(yaw)) * cos(radians(pitch));
 		camera_front = normalize_or_zero(front);
 		
 		fov -= xx mouse_scroll;
@@ -322,7 +322,7 @@ main :: () {
 		glUseProgram(shader_program);
 
 		projection := Matrix4_Identity;
-		projection = make_projection_matrix(fov * (PI / 180), window_width / cast (float) window_height, 0.1, 1000.0);
+		projection = make_projection_matrix(radians(fov), window_width / cast (float) window_height, 0.1, 1000.0);
 		set_mat4(shader_program, "projection", projection);
 
 		view := make_look_at_matrix(camera_position, camera_position + camera_front, UP, false);
@@ -334,7 +334,7 @@ main :: () {
             model := Matrix4_Identity;
             model = translate(model, cubes[i]);
             angle := 20.0 * i;
-            model = rotate(model, angle * (TAU / 360), Vector3.{1.0, 0.3, 0.5});
+            model = rotate(model, radians(angle), Vector3.{1.0, 0.3, 0.5});
 
             set_mat4(shader_program, "model", model);
             
@@ -345,15 +345,12 @@ main :: () {
 	}
 }
 
-rotate :: (transform: Matrix4, angle: float, axis: Vector3) -> Matrix4 {
-    rotation := make_quaternion(axis, angle);
-    return rotate(transform, rotation);
+radians :: (angle: float) -> float {
+	return angle * (PI / 180);
 }
 
-make_quaternion :: (vec3: Vector3, theta: float) -> Quaternion {
-    qx := vec3.x * sin(theta / 2);
-    qy := vec3.y * sin(theta / 2);
-    qz := vec3.z * sin(theta / 2);
-    qw := cos(theta / 2);
-    return make_quaternion(qx, qy, qz, qw);
+rotate :: (transform: Matrix4, angle: float, axis: Vector3) -> Matrix4 {
+    rotation: Quaternion;
+	set_from_axis_and_angle(*rotation, axis, angle);
+    return rotate(transform, rotation);
 }

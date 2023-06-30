@@ -225,14 +225,7 @@ main :: () {
 }
 
 rotate :: (transform: Matrix4, angle: float, axis: Vector3) -> Matrix4 {
-    rotation := make_quaternion(axis, angle);
+    rotation: Quaternion;
+	set_from_axis_and_angle(*rotation, axis, angle);
     return rotate(transform, rotation);
-}
-
-make_quaternion :: (vec3: Vector3, theta: float) -> Quaternion {
-    qx := vec3.x * sin(theta / 2);
-    qy := vec3.y * sin(theta / 2);
-    qz := vec3.z * sin(theta / 2);
-    qw := cos(theta / 2);
-    return make_quaternion(qx, qy, qz, qw);
 }
