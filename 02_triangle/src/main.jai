@@ -155,6 +155,7 @@ main :: () {
 		
 		glUseProgram(shader_program);
 		glBindVertexArray(VAO);
+		
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, null);
 
 		SDL_GL_SwapWindow(window);
