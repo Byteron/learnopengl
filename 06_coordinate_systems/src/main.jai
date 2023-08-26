@@ -250,12 +250,12 @@ main :: () {
 
 		glUseProgram(shader_program);
 
-		view := Matrix4_Identity;
         projection := Matrix4_Identity;
         projection = make_projection_matrix(45.0 * (PI / 180), window_width / cast (float) window_height, 0.1, 1000.0);
-        view = translate(view, make_vector3(0.0, 0.0, -3.0));
-        
 		set_mat4(shader_program, "projection", projection);
+        
+		view := Matrix4_Identity;
+        view = translate(view, make_vector3(0.0, 0.0, -3.0));
         set_mat4(shader_program, "view", view);
 
 		glBindVertexArray(VAO);
