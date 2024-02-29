@@ -6,44 +6,33 @@
 #import "stb_image";
 
 #load "shader.jai";
+#load "camera.jai";
+#load "input.jai";
 
-VERTEX_SHADER :: #string GLSL
-#version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec2 aTexCoord;
+UP :: Vector3.{0, 1, 0};
 
-out vec2 TexCoord;
+window_width: s32 = 1280;
+window_height: s32 = 800;
 
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
+camera_speed := 2.5;
+camera_position := Vector3.{0, 0, 3};
+camera_front := Vector3.{0, 0, -1};
 
-void main()
-{
-    gl_Position = projection * view * model * vec4(aPos, 1.0f);
-    TexCoord = vec2(aTexCoord.x, 1.0 - aTexCoord.y);
-}
-GLSL
+mouse_x := 0;
+mouse_y := 0;
+mouse_scroll := 0;
 
-FRAGMENT_SHADER :: #string GLSL
-#version 330 core
-out vec4 FragColor;
+camera: Camera;
 
-in vec2 TexCoord;
+time: float64;
+delta: float;
 
-uniform sampler2D texture1;
-uniform sampler2D texture2;
-
-void main()
-{
-    FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2);
-}
-GLSL
-
-window_width := 1280;
-window_height := 800;
+light_position :: Vector3.{1.2, 1, 2};
 
 main :: () {
+	print("%\n", light_position);
+
+	time = seconds_since_init();
     SDL_Init(SDL_INIT_VIDEO);
 	defer SDL_Quit();
 
@@ -62,7 +51,6 @@ main :: () {
 	defer SDL_DestroyWindow(window);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, xx SDL_GL_CONTEXT_PROFILE_CORE);
-
 	gl_context := SDL_GL_CreateContext(window);
 	if !gl_context {
 		log_error("Could not create OpenGL context: %\n", to_string(SDL_GetError()));
@@ -76,14 +64,19 @@ main :: () {
 	print("GL Version = %\n", to_string(glGetString(GL_VERSION)));
 
 	glEnable(GL_DEPTH_TEST);
-
-	shader_program, success := create_shader_program(VERTEX_SHADER, FRAGMENT_SHADER);
 	
-	if !success {
+	SDL_ShowCursor(0);
+
+	light_shader, success1 := create_shader_program(LIGHT_VERTEX_SHADER, LIGHT_FRAGMENT_SHADER);
+	lighting_shader, success2 := create_shader_program(LIGHTING_VERTEX_SHADER, LIGHTING_FRAGMENT_SHADER);
+
+	if !(success1 || success2) {
 		return;
 	}
 	
-	defer glDeleteProgram(shader_program);
+	
+	defer glDeleteProgram(light_shader);
+	defer glDeleteProgram(lighting_shader);
 	
 	vertices := float.[
 		-0.5, -0.5, -0.5,  0.0, 0.0,
@@ -98,35 +91,35 @@ main :: () {
          0.5,  0.5,  0.5,  1.0, 1.0,
          0.5,  0.5,  0.5,  1.0, 1.0,
         -0.5,  0.5,  0.5,  0.0, 1.0,
-        
         -0.5, -0.5,  0.5,  0.0, 0.0,
+
         -0.5,  0.5,  0.5,  1.0, 0.0,
         -0.5,  0.5, -0.5,  1.0, 1.0,
         -0.5, -0.5, -0.5,  0.0, 1.0,
         -0.5, -0.5, -0.5,  0.0, 1.0,
         -0.5, -0.5,  0.5,  0.0, 0.0,
-        
         -0.5,  0.5,  0.5,  1.0, 0.0,
+
          0.5,  0.5,  0.5,  1.0, 0.0,
          0.5,  0.5, -0.5,  1.0, 1.0,
          0.5, -0.5, -0.5,  0.0, 1.0,
          0.5, -0.5, -0.5,  0.0, 1.0,
          0.5, -0.5,  0.5,  0.0, 0.0,
-        
          0.5,  0.5,  0.5,  1.0, 0.0,
+
         -0.5, -0.5, -0.5,  0.0, 1.0,
          0.5, -0.5, -0.5,  1.0, 1.0,
          0.5, -0.5,  0.5,  1.0, 0.0,
          0.5, -0.5,  0.5,  1.0, 0.0,
         -0.5, -0.5,  0.5,  0.0, 0.0,
-        
         -0.5, -0.5, -0.5,  0.0, 1.0,
+
         -0.5,  0.5, -0.5,  0.0, 1.0,
          0.5,  0.5, -0.5,  1.0, 1.0,
          0.5,  0.5,  0.5,  1.0, 0.0,
          0.5,  0.5,  0.5,  1.0, 0.0,
         -0.5,  0.5,  0.5,  0.0, 0.0,
-        -0.5,  0.5, -0.5,  0.0, 1.0,
+        -0.5,  0.5, -0.5,  0.0, 1.0
 	];
 
 	cubes := Vector3.[
@@ -142,24 +135,33 @@ main :: () {
         .{-1.3,  1.0, -1.5},
     ];
 
-	VAO, VBO: GLuint;
+	cube_VAO, VBO: GLuint;
 	
-	glGenVertexArrays(1, *VAO);
-	defer glDeleteVertexArrays(1, *VAO);
+	glGenVertexArrays(1, *cube_VAO);
+	defer glDeleteVertexArrays(1, *cube_VAO);
 	
 	glGenBuffers(1, *VBO);
 	defer glDeleteBuffers(1, *VBO);
 
-	glBindVertexArray(VAO);
+	glBindVertexArray(cube_VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, size_of(type_of(vertices)), xx vertices.data, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * size_of(float), null);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * size_of(float), null);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * size_of(float), xx (3 * size_of(float)));
-	glEnableVertexAttribArray(1);
+	cube_light_VAO: GLuint;
+
+	glGenVertexArrays(1, *cube_light_VAO);
+	defer glDeleteVertexArrays(1, *cube_light_VAO);
+	
+	glBindVertexArray(cube_light_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * size_of(float), null);
+	glEnableVertexAttribArray(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -210,63 +212,73 @@ main :: () {
 
 	stbi_image_free(data);
 
-	glUseProgram(shader_program);
-
-	set_int(shader_program, "texture1", 0);
-	set_int(shader_program, "texture2", 1);
-
-	time := seconds_since_init();
-    delta := 0.0;
+	// glUseProgram(shader_program);
 
 	quit: bool;
 	while !quit {
+		mouse_x, mouse_y, mouse_scroll = 0;
+		is_warping_mouse := false;
+		
+		reset_keys();
+
 		event: SDL_Event;
 		while SDL_PollEvent(*event) {
 			if event.type == {
 				case SDL_QUIT;
 					quit = true;
+				case SDL_KEYDOWN;
+					press_key(event.key.keysym.scancode);
 				case SDL_KEYUP;
-					if event.key.keysym.sym == SDLK_ESCAPE quit = true;
+					release_key(event.key.keysym.scancode);
 				case SDL_WINDOWEVENT;
 					if event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED {
 						window_width = event.window.data1;
 						window_height = event.window.data2;
 					}
+					SDL_WarpMouseInWindow(window, window_width / 2, window_height / 2);
+					is_warping_mouse = true;
+				case SDL_MOUSEMOTION;
+					if is_warping_mouse {
+						is_warping_mouse = false;
+					} else {
+						mouse_x = event.motion.xrel;
+						mouse_y = event.motion.yrel;
+					}
+			
+				case SDL_MOUSEWHEEL;
+					mouse_scroll = event.wheel.y;
 			}
 		}
+		
+		if key_down(SDL_SCANCODE_ESCAPE) quit = true;
 
 		new_time := seconds_since_init();
         delta = xx (new_time - time);
         time = new_time;
 
+		update_flying_camera(*camera);
+			
 		glViewport(0, 0, xx window_width, xx window_height);
+
 		glClearColor(0.2, 0.3, 0.3, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-		glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
 
-		glUseProgram(shader_program);
+		glUseProgram(lighting_shader);
+		set_vec3(lighting_shader, "objectColor", xyz(1, 0.5, 0.31));
+		set_vec3(lighting_shader, "lightColor", xyz(1, 1, 1));
 
-        projection := Matrix4_Identity;
-        projection = make_projection_matrix(45.0 * (PI / 180), window_width / cast (float) window_height, 0.1, 1000.0);
-		set_mat4(shader_program, "projection", projection);
-        
-		view := Matrix4_Identity;
-        view = translate(view, make_vector3(0.0, 0.0, -3.0));
-        set_mat4(shader_program, "view", view);
+		//set_mat4(shader_program, "projection", camera.projection_matrix);
+        //set_mat4(shader_program, "view", camera.view_matrix);
 
-		glBindVertexArray(VAO);
+		glBindVertexArray(cube_VAO);
 
         for i: 0..9 {
             model := Matrix4_Identity;
             model = translate(model, cubes[i]);
             angle := 20.0 * i;
-            model = rotate(model, angle * (TAU / 360), Vector3.{1.0, 0.3, 0.3});
+            model = rotate(model, radians(angle), Vector3.{1.0, 0.3, 0.5});
 
-            set_mat4(shader_program, "model", model);
+            //set_mat4(shader_program, "model", model);
             
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
@@ -275,8 +287,66 @@ main :: () {
 	}
 }
 
+radians :: (angle: float) -> float {
+	return angle * (PI / 180);
+}
+
 rotate :: (transform: Matrix4, angle: float, axis: Vector3) -> Matrix4 {
     rotation: Quaternion;
 	set_from_axis_and_angle(*rotation, axis, angle);
     return rotate(transform, rotation);
 }
+
+LIGHT_VERTEX_SHADER :: #string GLSL
+#version 330 core
+layout (location = 0) in vec3 aPos;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+} 
+GLSL
+
+LIGHT_FRAGMENT_SHADER :: #string GLSL
+#version 330 core
+out vec4 FragColor;
+  
+uniform vec3 objectColor;
+uniform vec3 lightColor;
+
+void main()
+{
+    FragColor = vec4(lightColor * objectColor, 1.0);
+}
+GLSL
+
+LIGHTING_VERTEX_SHADER :: #string GLSL
+#version 330 core
+layout (location = 0) in vec3 aPos;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+} 
+GLSL
+
+LIGHTING_FRAGMENT_SHADER :: #string GLSL
+#version 330 core
+out vec4 FragColor;
+  
+uniform vec3 objectColor;
+uniform vec3 lightColor;
+
+void main()
+{
+    FragColor = vec4(lightColor * objectColor, 1.0);
+}
+GLSL

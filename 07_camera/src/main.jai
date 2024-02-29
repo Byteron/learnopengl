@@ -63,7 +63,7 @@ time: float64;
 delta: float;
 
 main :: () {
-	time = get_time();
+	time = seconds_since_init();
     SDL_Init(SDL_INIT_VIDEO);
 	defer SDL_Quit();
 
@@ -274,7 +274,7 @@ main :: () {
 		
 		if key_down(SDL_SCANCODE_ESCAPE) quit = true;
 
-		new_time := get_time();
+		new_time := seconds_since_init();
         delta = xx (new_time - time);
         time = new_time;
 

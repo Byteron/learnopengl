@@ -72,3 +72,15 @@ create_shader_program :: (vertex_source: string, fragment_source: string) -> GLu
 
 	return result, true;
 }
+
+set_int :: (shader: GLuint, name: string, value: s32) {
+    glUniform1i(glGetUniformLocation(shader, to_c_string(name)), value);
+}
+
+set_mat4 :: (shader: GLuint, name: string, value: Matrix4) {
+    glUniformMatrix4fv(glGetUniformLocation(shader, to_c_string(name)), 1, GL_TRUE, *value.coef[0][0]);
+}
+
+set_vec3 :: (shader: GLuint, name: string, value: Vector3) {
+	glUniform3fv(glGetUniformLocation(shader, to_c_string(name)), 1, *value.component[0]);
+}

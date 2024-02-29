@@ -14,4 +14,3 @@
 #import "String";
 
 #load "src/main.jai";
-#load "../utils.jai";

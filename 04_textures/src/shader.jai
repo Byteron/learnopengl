@@ -9,7 +9,7 @@ create_shader_program :: (vertex_source: string, fragment_source: string) -> GLu
 		if !success {
 			info_len: s32;
 			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, *info_len);
-			info_data := cast(*u8) alloc(info_len, temp);
+			info_data := cast(*u8) alloc(info_len,, temp);
 			glGetShaderInfoLog(shader, xx info_len, xx *info_len, info_data);
 			result: string;
 			result.data = info_data;
@@ -27,7 +27,7 @@ create_shader_program :: (vertex_source: string, fragment_source: string) -> GLu
 		if !success {
 			info_len: s32;
 			glGetProgramiv(program, GL_INFO_LOG_LENGTH, *info_len);
-			info_data := cast(*u8) alloc(info_len, temp);
+			info_data := cast(*u8) alloc(info_len,, temp);
 			glGetProgramInfoLog(program, xx info_len, xx *info_len, info_data);
 			result: string;
 			result.data = info_data;

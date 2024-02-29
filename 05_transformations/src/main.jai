@@ -175,7 +175,7 @@ main :: () {
 	glUniform1i(glGetUniformLocation(shader_program, "texture1"), 0);
 	glUniform1i(glGetUniformLocation(shader_program, "texture2"), 1);
 
-	time := get_time();
+	time := seconds_since_init();
     delta := 0.0;
 
 	quit: bool;
@@ -195,7 +195,7 @@ main :: () {
 			}
 		}
 
-		new_time := get_time();
+		new_time := seconds_since_init();
         delta = xx (new_time - time);
         time = new_time;
 

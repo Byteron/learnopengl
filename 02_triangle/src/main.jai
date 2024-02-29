@@ -67,7 +67,7 @@ main :: () {
 	glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, *success);
 	if !success {
 		glGetShaderInfoLog(vertex_shader, 512, null, info_log.data);
-        log_error("Error: %\n", to_string(info_log));
+        log_error("Error: %\n", cast(string) info_log);
 		return;
 	}
 
@@ -79,7 +79,7 @@ main :: () {
 	glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, *success);
 	if !success {
 		glGetShaderInfoLog(fragment_shader, 512, null, info_log.data);
-        log_error("Error: %\n", to_string(info_log));
+        log_error("Error: %\n", cast(string) info_log);
 		return;
 	}
 
@@ -92,7 +92,7 @@ main :: () {
 	glGetProgramiv(shader_program, GL_LINK_STATUS, *success);
     if !success {
         glGetProgramInfoLog(shader_program, 512, null, info_log.data);
-        log_error("Error: %\n", to_string(info_log));
+        log_error("Error: %\n", cast(string) info_log);
 		return;
     }
 
